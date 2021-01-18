@@ -25,7 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * the lock reference count and unlocking when the resource is closed.
  */
 public class RefCountLockResource extends RWLockResource {
-  private final AtomicInteger mRefCount;
+  private final AtomicInteger mRefCount; // 引用计数
 
   /**
    * Creates a new instance of {@link LockResource} using the given lock and reference counter. The

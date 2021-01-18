@@ -554,7 +554,7 @@ public class InodeTree implements DelegatingJournaled {
       valid = true;
       return new InodePathPair(lockedPath1, lockedPath2);
     } finally {
-      if (!valid) {
+      if (!valid) { // 如果上面加锁失败了，并不能自动走到InodePathPair的close方法里，所以需要判断并释放锁
         if (lockedPath1 != null) {
           lockedPath1.close();
         }

@@ -88,7 +88,7 @@ public class LockPool<K> implements Closeable {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() throws IOException { // 关闭mEvictor线程池
     mEvictorTask.cancel(true);
     mEvictor.shutdownNow(); // immediately halt the evictor thread.
     try {
@@ -145,7 +145,7 @@ public class LockPool<K> implements Closeable {
      */
     private void awaitAndEvict() throws InterruptedException {
       try (LockResource l = new LockResource(mEvictLock)) {
-        while (mPool.size() <= mHighWatermark) {
+        while (mPool.size() <= mHighWatermark) { // pool大小没超过高水位，则wait 30秒
           mOverHighWatermark.await(EVICTION_MAX_AWAIT_TIME, TimeUnit.MILLISECONDS);
         }
         int numToEvict = mPool.size() - mLowWatermark;
@@ -164,13 +164,13 @@ public class LockPool<K> implements Closeable {
           if (candidate.mIsAccessed) {
             candidate.mIsAccessed = false;
           } else {
-            if (candidate.mRefCount.compareAndSet(0, Integer.MIN_VALUE)) {
-              mIterator.remove();
+            if (candidate.mRefCount.compareAndSet(0, Integer.MIN_VALUE)) { // 如果candidate的refCount为0，则把refCount设置为负数
+              mIterator.remove(); // 删除此resource
               numToEvict--;
             }
           }
         }
-        if (mPool.size() >= mHighWatermark) {
+        if (mPool.size() >= mHighWatermark) { // evict之后，pool大小还是超过高水位，打印日志
           if (System.currentTimeMillis() - mLastSizeWarningTime
               > OVER_HIGH_WATERMARK_LOG_INTERVAL) {
             LOG.warn("LockPool size grows over high watermark: "
@@ -206,8 +206,8 @@ public class LockPool<K> implements Closeable {
    * @return a lock resource which must be closed to unlock the key
    */
   public RWLockResource get(K key, LockMode mode, boolean useTryLock) {
-    Resource resource = getResource(key);
-    return new RefCountLockResource(resource.mLock, mode, true, resource.mRefCount, useTryLock);
+    Resource resource = getResource(key); // 获取一个LockResource
+    return new RefCountLockResource(resource.mLock, mode, true, resource.mRefCount, useTryLock); // 包装为引用计数LockResource
   }
 
   /**
@@ -218,7 +218,7 @@ public class LockPool<K> implements Closeable {
    * @return either empty or a lock resource which must be closed to unlock the key
    */
   public Optional<RWLockResource> tryGet(K key, LockMode mode) {
-    Resource resource = getResource(key);
+    Resource resource = getResource(key); // 获取一个LockResource
     ReentrantReadWriteLock lock = resource.mLock;
     Lock innerLock;
     switch (mode) {
@@ -231,7 +231,7 @@ public class LockPool<K> implements Closeable {
       default:
         throw new IllegalStateException("Unknown lock mode: " + mode);
     }
-    if (!innerLock.tryLock()) {
+    if (!innerLock.tryLock()) { // 尝试获取锁，立即返回
       return Optional.empty();
     }
     return Optional.of(new RefCountLockResource(lock, mode, false, resource.mRefCount, false));
@@ -244,21 +244,21 @@ public class LockPool<K> implements Closeable {
    * @return the lock associated with the key
    */
   @VisibleForTesting
-  public ReentrantReadWriteLock getRawReadWriteLock(K key) {
+  public ReentrantReadWriteLock getRawReadWriteLock(K key) { // 获取原始的锁对象
     return mPool.getOrDefault(key, new Resource(new ReentrantReadWriteLock())).mLock;
   }
 
-  private Resource getResource(K key) {
+  private Resource getResource(K key) { // 获取一个LockResource
     Preconditions.checkNotNull(key, "key can not be null");
-    Resource resource = mPool.compute(key, (k, v) -> {
-      if (v != null && v.mRefCount.incrementAndGet() > 0) {
+    Resource resource = mPool.compute(key, (k, v) -> { // 如果key对应的resource存在，则refCount+1，并返回resource，不存在则new一个新的resource对象
+      if (v != null && v.mRefCount.incrementAndGet() > 0) { // 当evict resource时，会把refCount设置为Integer最小值
         // If the entry is to be removed, ref count will be INT_MIN, so incrementAndGet will < 0.
         v.mIsAccessed = true;
         return v;
       }
       return new Resource(mDefaultLoader.apply(k));
     });
-    if (mPool.size() > mHighWatermark) {
+    if (mPool.size() > mHighWatermark) { // pool大小超过高水位
       if (mEvictLock.tryLock()) {
         try {
           mOverHighWatermark.signal();
@@ -286,7 +286,7 @@ public class LockPool<K> implements Closeable {
    * @return true if the key is contained in the pool
    */
   @VisibleForTesting
-  public boolean containsKey(K key) {
+  public boolean containsKey(K key) { // 是否有指定的key
     Preconditions.checkNotNull(key, "key can not be null");
     return mPool.containsKey(key);
   }
@@ -311,7 +311,7 @@ public class LockPool<K> implements Closeable {
   /**
    * Resource containing the lock and other information to be stored in the pool.
    */
-  private static final class Resource {
+  private static final class Resource { // 锁资源
     private final ReentrantReadWriteLock mLock;
     private volatile boolean mIsAccessed;
     private AtomicInteger mRefCount;

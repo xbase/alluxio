@@ -81,7 +81,7 @@ public class LockResource implements Closeable {
     mLock = lock;
     mCloseAction = closeAction;
     if (acquireLock) {
-      if (useTryLock) {
+      if (useTryLock) { // 使用tryLock方式获取锁，同样是阻塞直到获取到锁
         while (!mLock.tryLock()) { // returns immediately
           // The reason we don't use #tryLock(int, TimeUnit) here is because we found there is a bug
           // somewhere in the internal accounting of the ReentrantRWLock that, even though all
@@ -89,7 +89,7 @@ public class LockResource implements Closeable {
           LockSupport.parkNanos(10000);
         }
       } else {
-        mLock.lock();
+        mLock.lock(); // 阻塞直到获取到锁
       }
     }
   }

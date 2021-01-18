@@ -126,14 +126,14 @@ public class InodeLockManager implements Closeable {
     assertAllLocksReleased(mInodeLocks);
   }
 
-  private <T> void assertAllLocksReleased(LockPool<T> pool) {
+  private <T> void assertAllLocksReleased(LockPool<T> pool) { // 是否所有的锁都已被释放
     for (Entry<T, ReentrantReadWriteLock> entry : pool.getEntryMap().entrySet()) {
       ReentrantReadWriteLock lock = entry.getValue();
-      if (lock.isWriteLocked()) {
+      if (lock.isWriteLocked()) { // 是否还有线程持有此lock的写锁
         throw new RuntimeException(
             String.format("Found a write-locked lock for %s", entry.getKey()));
       }
-      if (lock.getReadLockCount() > 0) {
+      if (lock.getReadLockCount() > 0) { // 是否还有线程持有此lock的读锁
         throw new RuntimeException(
             String.format("Found a read-locked lock for %s", entry.getKey()));
       }
@@ -151,7 +151,7 @@ public class InodeLockManager implements Closeable {
    * @return a lock resource which must be closed to release the lock
    * @see #tryLockInode(Long, LockMode)
    */
-  public RWLockResource lockInode(InodeView inode, LockMode mode, boolean useTryLock) {
+  public RWLockResource lockInode(InodeView inode, LockMode mode, boolean useTryLock) { // 阻塞直到获取到锁
     return mInodeLocks.get(inode.getId(), mode, useTryLock);
   }
 
@@ -162,7 +162,7 @@ public class InodeLockManager implements Closeable {
    * @param mode the mode to lock in
    * @return either an empty optional, or a lock resource which must be closed to release the lock
    */
-  public Optional<RWLockResource> tryLockInode(Long inodeId, LockMode mode) {
+  public Optional<RWLockResource> tryLockInode(Long inodeId, LockMode mode) { // 尝试获取锁，不阻塞
     return mInodeLocks.tryGet(inodeId, mode);
   }
 

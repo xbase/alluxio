@@ -45,7 +45,7 @@ public class RWLockResource extends LockResource {
    *
    * @return if a successful downgrade was performed. Returns false if it was read locked
    */
-  public boolean downgrade() {
+  public boolean downgrade() { // 写锁降级为读锁
     if (!mRwLock.isWriteLocked()) {
       return false;
     }
@@ -55,7 +55,7 @@ public class RWLockResource extends LockResource {
 
     // Downgrade by taking the read lock and then unlocking the write lock.
     mRwLock.readLock().lock();
-    mLock.unlock();
+    mLock.unlock(); // 释放写锁
     mLock = mRwLock.readLock();
     return true;
   }
